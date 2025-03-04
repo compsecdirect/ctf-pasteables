@@ -4,6 +4,7 @@
 # / /___  / / / /|_____/ ___/ (_| \__ \ ||  __/ (_| | |_) | |  __/\__ \
 # \____/  \/  \/       \/    \__,_|___/\__\___|\__,_|_.__/|_|\___||___/
 
+Version 10 3/4/2025
 Version 9 08/12/2022
 Version 8 10/16/2019
 Version 7 5/18/2018
@@ -15,6 +16,7 @@ Version 2 09/9/2016
 
 Created by jfer (jfer@compsecdirect.com) @jfersec #jfersec
 Change Log:
+Version 10: caldera poc
 Version 9: Edits and new techniques
 Version 8: Open-Source Version
 Version 7: OSCP exam edits
@@ -105,6 +107,9 @@ proxychains nmap -Pn -sV -sT -T5 -O --dns-servers 10.2.2.15 10.2.2.15 -oA nmap-f
 ===========================================================
 Exploits
 ===========================================================
+*caldera rce*
+python3 coldera-cve-2025-27364.py http://target.local
+
 *For purchase*
 https://exploithub.com
 
